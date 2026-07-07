@@ -107,10 +107,12 @@
   }
 
   // 描画後に呼ぶ: コードのハイライト + コピーボタンを付ける
+  // pre に data-lang があればそれを優先(none なら色分けしない)
   function enhanceCodeBlocks(lang) {
     app.querySelectorAll("pre").forEach((pre) => {
       const codeEl = pre.querySelector("code") || pre;
-      if (lang) highlightElement(codeEl, lang);
+      const preLang = pre.dataset.lang || lang;
+      if (preLang && HIGHLIGHT_RE[preLang]) highlightElement(codeEl, preLang);
 
       const btn = document.createElement("button");
       btn.className = "copy-btn";
@@ -222,6 +224,8 @@
     if (parts[0] === "docs" && DATA[parts[1]]) return renderDocs(parts[1], parts[2]);
     if (parts[0] === "quiz" && DATA[parts[1]]) return startQuiz(parts[1], parts[2] === "review");
     if (parts[0] === "review") return renderReview();
+    if (parts[0] === "glossary") return renderGlossary();
+    if (parts[0] === "guide") return renderGuide(parts[1]);
     return renderHome();
   }
 
@@ -280,7 +284,133 @@
           <div class="stat-chip"><span class="num">${totalMastered}</span><span class="label"> 問 習得済み</span></div>
         </div>
       </section>
-      <div class="lang-grid">${cards}</div>`;
+      <div class="lang-grid">${cards}</div>
+      <section class="extra-grid">
+        <a class="extra-card" href="#/glossary">
+          <span class="extra-icon">📚</span>
+          <span>
+            <strong>用語集</strong>
+            <span class="extra-desc">「API って何?」に答える、よく使われる ${(window.GLOSSARY || []).length} 語をカテゴリ別・検索付きで</span>
+          </span>
+        </a>
+        <a class="extra-card" href="#/guide">
+          <span class="extra-icon">🛠</span>
+          <span>
+            <strong>おまけ: このサイトの作り</strong>
+            <span class="extra-desc">今見ているこのサイト自体の HTML / CSS / JS の仕組みをコード付きで解説</span>
+          </span>
+        </a>
+      </section>`;
+  }
+
+  /* ---------- おまけ: このサイトの作り ---------- */
+
+  function renderGuide(chapterId) {
+    const guide = window.SITE_GUIDE || [];
+    if (guide.length === 0) return renderHome();
+    const chapter = guide.find((c) => c.id === chapterId) || guide[0];
+    const idx = guide.indexOf(chapter);
+
+    const sidebar = guide
+      .map(
+        (c, i) =>
+          `<a href="#/guide/${c.id}" class="${c.id === chapter.id ? "active" : ""}">
+             <span class="idx">${String(i + 1).padStart(2, "0")}</span>${esc(c.title)}</a>`
+      )
+      .join("");
+
+    const prev = guide[idx - 1];
+    const next = guide[idx + 1];
+
+    app.innerHTML = `
+      <div class="breadcrumb"><a href="#/">ホーム</a> / おまけ: このサイトの作り</div>
+      <div class="docs-layout" style="--lang-color:var(--accent)">
+        <aside class="docs-sidebar">
+          <div class="sidebar-title"><span class="lang-dot"></span>サイトの作り</div>
+          ${sidebar}
+        </aside>
+        <article class="docs-content">
+          <div class="chapter-no">BEHIND THE SITE ${String(idx + 1).padStart(2, "0")} / ${String(guide.length).padStart(2, "0")}</div>
+          <h1>${esc(chapter.title)}</h1>
+          ${chapter.body}
+          <div class="docs-nav-links">
+            <span>${prev ? `<a class="btn" href="#/guide/${prev.id}">← ${esc(prev.title)}</a>` : ""}</span>
+            <span>${
+              next
+                ? `<a class="btn" href="#/guide/${next.id}">${esc(next.title)} →</a>`
+                : `<a class="btn btn-primary" href="#/">ホームへ戻る</a>`
+            }</span>
+          </div>
+        </article>
+      </div>`;
+
+    // 各コードブロックの data-lang に従ってハイライトする
+    enhanceCodeBlocks(null);
+  }
+
+  /* ---------- 用語集 ---------- */
+
+  function renderGlossary() {
+    const terms = window.GLOSSARY || [];
+    const cats = [...new Set(terms.map((t) => t.cat))];
+    let activeCat = "すべて";
+    let query = "";
+
+    app.innerHTML = `
+      <h1 class="page-title">用語集</h1>
+      <p class="page-sub">プログラミングでよく使われる ${terms.length} 語。検索とカテゴリで絞り込めます。</p>
+      <div class="glossary-controls">
+        <input class="search-input" id="glossary-search" type="search"
+               placeholder="用語を検索(例: API、変数、async...)" aria-label="用語を検索">
+        <div class="cat-chips" id="cat-chips">
+          ${["すべて"].concat(cats).map((c) => `<button class="chip${c === "すべて" ? " active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+        </div>
+      </div>
+      <p class="glossary-count" id="glossary-count"></p>
+      <div class="glossary-list" id="glossary-list"></div>`;
+
+    const listEl = document.getElementById("glossary-list");
+    const countEl = document.getElementById("glossary-count");
+
+    function renderList() {
+      const q = query.trim().toLowerCase();
+      const filtered = terms.filter((t) => {
+        if (activeCat !== "すべて" && t.cat !== activeCat) return false;
+        if (!q) return true;
+        return (t.term + t.en + t.def).toLowerCase().includes(q);
+      });
+      countEl.textContent = `${filtered.length} 語を表示中`;
+      listEl.innerHTML = filtered.length
+        ? filtered
+            .map(
+              (t) => `
+              <div class="glossary-item">
+                <div class="glossary-head">
+                  <span class="glossary-term">${esc(t.term)}</span>
+                  <span class="glossary-en">${esc(t.en)}</span>
+                  <span class="glossary-cat">${esc(t.cat)}</span>
+                </div>
+                <p class="glossary-def">${esc(t.def)}</p>
+              </div>`
+            )
+            .join("")
+        : `<div class="review-empty"><p>「${esc(query)}」に一致する用語が見つかりませんでした。</p></div>`;
+    }
+
+    document.getElementById("glossary-search").addEventListener("input", (e) => {
+      query = e.target.value;
+      renderList();
+    });
+
+    document.getElementById("cat-chips").addEventListener("click", (e) => {
+      const chip = e.target.closest(".chip");
+      if (!chip) return;
+      activeCat = chip.dataset.cat;
+      document.querySelectorAll("#cat-chips .chip").forEach((c) => c.classList.toggle("active", c === chip));
+      renderList();
+    });
+
+    renderList();
   }
 
   /* ---------- ドキュメント ---------- */
