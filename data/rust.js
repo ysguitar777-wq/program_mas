@@ -233,6 +233,167 @@ if let Some(score) = scores.get("太郎") {
     println!("{score}");
 }</code></pre>
 <p>イテレータは<strong>遅延評価</strong>で、<code>collect()</code> などを呼ぶまで実際の処理は走りません。</p>`
+    },
+    {
+      id: "rust-strengths",
+      title: "応用: Rust が得意なこと(活用分野マップ)",
+      body: `
+<p>ここからは応用編です。Rust の強みは <strong>「C/C++ 並みの速度」と「メモリ安全」の両立</strong>、そして <strong>GC(ガベージコレクタ)が無いこと</strong>による安定した実行速度です。この強みが活きる分野を押さえましょう。</p>
+<h2>Rust が選ばれている分野</h2>
+<ul>
+<li><strong>CLI ツール</strong>: 高速起動・単一バイナリで配布が簡単。<code>ripgrep</code>(高速grep)や <code>fd</code>、<code>bat</code> など人気ツールが Rust 製</li>
+<li><strong>Web バックエンド</strong>: 少ないメモリで大量リクエストを高速処理。Discord や Cloudflare が採用</li>
+<li><strong>WebAssembly (Wasm)</strong>: ブラウザ内でネイティブ級の速度が必要な処理(画像処理・ゲーム・エディタなど)。Figma のコア部分が有名</li>
+<li><strong>デスクトップアプリ</strong>: <strong>Tauri</strong> を使うと Web 技術(HTML/JS)でUIを作り、本体を Rust で書ける軽量アプリが作れる(Electron より省メモリ)</li>
+<li><strong>システム・組み込み</strong>: OS(Linuxカーネルにも採用)、組み込み機器、ブラウザエンジンなど、C/C++ の置き換え</li>
+<li><strong>高速化エンジン</strong>: Python の Polars や JS の SWC など「他言語の道具の中身」としても活躍</li>
+</ul>
+<h2>最初のプロジェクト管理 — Cargo</h2>
+<pre><code># Cargo はビルド・実行・パッケージ管理を全部こなす公式ツール
+cargo new hello       # プロジェクト作成
+cd hello
+cargo run             # ビルドして実行
+cargo add serde       # ライブラリ(クレート)を追加
+cargo build --release # 最適化ビルド(配布用)</code></pre>
+<p>ライブラリは<strong>クレート (crate)</strong> と呼ばれ、crates.io で公開されています。この後の章で「CLI」「Webサーバー」「WebAssembly」を順に体験します。</p>`
+    },
+    {
+      id: "rust-cli",
+      title: "応用: CLI ツール開発 (clap)",
+      body: `
+<p>Rust 入門後の最初のアプリに最適なのが <strong>CLI(コマンドラインツール)</strong>です。速く、単一ファイルで配れて、Rust の型システムの恩恵をすぐ感じられます。</p>
+<h2>clap — 引数解析の定番クレート</h2>
+<pre><code>cargo new wordcount
+cd wordcount
+cargo add clap --features derive</code></pre>
+<pre><code>use clap::Parser;
+use std::fs;
+
+/// ファイルの行数・単語数を数えるツール
+#[derive(Parser)]
+struct Args {
+    /// 対象ファイルのパス
+    path: String,
+
+    /// 単語数も表示する
+    #[arg(short, long)]
+    words: bool,
+}
+
+fn main() {
+    let args = Args::parse();   // --help も自動生成される!
+
+    let text = fs::read_to_string(&args.path)
+        .expect("ファイルを読めませんでした");
+
+    println!("行数: {}", text.lines().count());
+    if args.words {
+        let count = text.split_whitespace().count();
+        println!("単語数: {count}");
+    }
+}</code></pre>
+<pre><code>cargo run -- notes.txt --words
+# 行数: 12
+# 単語数: 84</code></pre>
+<h2>ポイント</h2>
+<ul>
+<li>構造体に属性を付けるだけで、引数解析・ヘルプ・エラー表示が自動生成される</li>
+<li><code>cargo build --release</code> で作った1つの実行ファイルをそのまま配布できる</li>
+<li>組み合わせると便利: <code>anyhow</code>(エラー処理を簡潔に)、<code>indicatif</code>(進捗バー)、<code>colored</code>(色付き出力)</li>
+</ul>`
+    },
+    {
+      id: "rust-web",
+      title: "応用: Web サーバー開発 (axum / tokio)",
+      body: `
+<p>Rust は<strong>高速・省メモリなWebバックエンド</strong>としても人気です。定番は非同期ランタイム <strong>tokio</strong> + Webフレームワーク <strong>axum</strong> の組み合わせです。</p>
+<pre><code>cargo new api-server
+cd api-server
+cargo add tokio --features full
+cargo add axum
+cargo add serde --features derive
+cargo add serde_json</code></pre>
+<h2>JSON を返す最小のAPI</h2>
+<pre><code>use axum::{routing::get, Json, Router};
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct User {
+    id: u32,
+    name: String,
+}
+
+async fn list_users() -> Json&lt;Vec&lt;User&gt;&gt; {
+    Json(vec![
+        User { id: 1, name: "太郎".to_string() },
+        User { id: 2, name: "花子".to_string() },
+    ])
+}
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new().route("/users", get(list_users));
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+        .await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}</code></pre>
+<pre><code>cargo run
+# 別ターミナルで:
+curl http://localhost:3000/users
+# → [{"id":1,"name":"太郎"},{"id":2,"name":"花子"}]</code></pre>
+<h2>ポイント</h2>
+<ul>
+<li><code>async fn</code> + <code>await</code> で非同期処理を書く(tokio が実行を管理)</li>
+<li><strong>serde</strong> の <code>#[derive(Serialize)]</code> だけで構造体がJSONに変換できる</li>
+<li>データベースは <code>sqlx</code>(SQLを型チェックできる)が定番</li>
+<li>コンパイルが通れば落ちにくい、というRustの安心感がサーバー用途で特に効く</li>
+</ul>`
+    },
+    {
+      id: "rust-wasm-ecosystem",
+      title: "応用: WebAssembly と定番クレート",
+      body: `
+<h2>WebAssembly (Wasm) — ブラウザで Rust を動かす</h2>
+<p>Rust は WebAssembly 対応が最も進んだ言語です。ブラウザ内で重い計算(画像処理・物理演算・パーサーなど)をネイティブ級の速度で実行できます。</p>
+<pre><code># wasm-pack でビルドすると JS から呼べるパッケージになる
+cargo install wasm-pack
+cargo new --lib mylib && cd mylib
+cargo add wasm-bindgen</code></pre>
+<pre><code>use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub fn fib(n: u32) -> u64 {
+    let (mut a, mut b) = (0u64, 1u64);
+    for _ in 0..n {
+        let next = a + b;
+        a = b;
+        b = next;
+    }
+    a
+}</code></pre>
+<pre><code>// JavaScript / TypeScript 側から普通の関数として呼べる
+import init, { fib } from "./pkg/mylib.js";
+await init();
+console.log(fib(50));   // 高速に計算される</code></pre>
+<h2>デスクトップアプリ — Tauri</h2>
+<p><strong>Tauri</strong> は「UIはWeb技術(React等)、本体はRust」で作るデスクトップアプリのフレームワークです。Electron に比べて配布サイズ・メモリ使用量が大幅に小さく、TypeScript の知識と組み合わせられます。</p>
+<h2>覚えておきたい定番クレート</h2>
+<ul>
+<li><strong>serde</strong>: JSON等との相互変換。Rust エコシステムの土台</li>
+<li><strong>tokio</strong>: 非同期ランタイム(サーバー・並行処理)</li>
+<li><strong>reqwest</strong>: HTTP クライアント(API呼び出し)</li>
+<li><strong>anyhow / thiserror</strong>: エラー処理を書きやすくする</li>
+<li><strong>rayon</strong>: <code>.iter()</code> を <code>.par_iter()</code> に変えるだけで並列処理</li>
+<li><strong>clap / axum / sqlx</strong>: CLI / Web / DB(前章参照)</li>
+</ul>
+<h2>学習ロードマップ</h2>
+<ol>
+<li>所有権・Option/Result など本サイトの基礎編を固める</li>
+<li>clap で CLI ツールを1本作る(最短で達成感が得られる)</li>
+<li>axum で JSON API を作る、または Tauri でデスクトップアプリ化</li>
+<li>必要になったら WebAssembly で「ブラウザの中の高速エンジン」に挑戦</li>
+</ol>`
     }
   ],
   quiz: [

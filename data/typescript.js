@@ -210,6 +210,169 @@ export const VERSION = "1.0";
 // main.ts
 import { double, VERSION } from "./util";</code></pre>
 <p>イミュータブル(元のオブジェクトを変更せずコピーを作る)な書き方は React などのフレームワークで特に重要です。</p>`
+    },
+    {
+      id: "react-basics",
+      title: "応用: React 入門 (コンポーネントと JSX)",
+      body: `
+<p>ここからは応用編です。<strong>React</strong> は「UIを部品(コンポーネント)の組み合わせで作る」ライブラリで、フロントエンド開発の事実上の標準です。</p>
+<h2>プロジェクトの作成</h2>
+<pre><code># Vite で React + TypeScript プロジェクトを作る
+npm create vite@latest my-app -- --template react-ts
+cd my-app
+npm install
+npm run dev     # http://localhost:5173 で起動</code></pre>
+<h2>コンポーネントと JSX</h2>
+<p>コンポーネントは「HTMLのような記法(JSX)を返す関数」です。</p>
+<pre><code>type GreetingProps = {
+  name: string;
+  age?: number;          // ? は省略可能
+};
+
+function Greeting({ name, age }: GreetingProps) {
+  return (
+    &lt;div className="card"&gt;
+      &lt;h1&gt;こんにちは、{name}さん&lt;/h1&gt;
+      {age !== undefined &amp;&amp; &lt;p&gt;{age}歳&lt;/p&gt;}
+    &lt;/div&gt;
+  );
+}
+
+// 使う側: HTMLタグのように書き、props でデータを渡す
+function App() {
+  return &lt;Greeting name="太郎" age={20} /&gt;;
+}</code></pre>
+<h2>JSX のポイント</h2>
+<ul>
+<li><code>{ }</code> の中に JavaScript の式を書ける</li>
+<li>class 属性は <code>className</code> と書く</li>
+<li>一覧表示は <code>items.map(item =&gt; &lt;li key={item.id}&gt;...&lt;/li&gt;)</code>(key 必須)</li>
+<li>TypeScript なら props の型を定義でき、渡し忘れ・型違いをコンパイル時に検出できる</li>
+</ul>`
+    },
+    {
+      id: "react-hooks",
+      title: "応用: React のフックと状態管理",
+      body: `
+<p>「ボタンを押したら表示が変わる」ような動きは<strong>state(状態)</strong>で作ります。関数コンポーネントでは <strong>フック(use〜)</strong> を使います。</p>
+<h2>useState — 状態を持つ</h2>
+<pre><code>import { useState } from "react";
+
+function Counter() {
+  const [count, setCount] = useState(0);   // [現在値, 更新関数]
+
+  return (
+    &lt;button onClick={() =&gt; setCount(count + 1)}&gt;
+      クリック回数: {count}
+    &lt;/button&gt;
+  );
+}</code></pre>
+<p><strong>重要:</strong> state は直接書き換えず、必ず更新関数(<code>setCount</code>)で更新します。更新されると React が自動で再描画します。</p>
+<h2>useEffect — 通信などの副作用</h2>
+<pre><code>import { useState, useEffect } from "react";
+
+function UserList() {
+  const [users, setUsers] = useState&lt;User[]&gt;([]);
+
+  useEffect(() =&gt; {
+    // 初回表示時に一度だけ実行される(第2引数が [] の場合)
+    fetch("/api/users")
+      .then((res) =&gt; res.json())
+      .then((data) =&gt; setUsers(data));
+  }, []);
+
+  return (
+    &lt;ul&gt;
+      {users.map((u) =&gt; &lt;li key={u.id}&gt;{u.name}&lt;/li&gt;)}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+<h2>状態管理のステップアップ</h2>
+<ul>
+<li>親子でデータ共有 → props で渡す(基本)</li>
+<li>離れたコンポーネント間 → <code>useContext</code></li>
+<li>アプリ全体の複雑な状態 → <strong>Zustand</strong>(シンプルで人気)や <strong>Redux Toolkit</strong></li>
+<li>サーバーデータの取得・キャッシュ → <strong>TanStack Query</strong>(useEffect での fetch を置き換える定番)</li>
+</ul>`
+    },
+    {
+      id: "nextjs",
+      title: "応用: Next.js 入門",
+      body: `
+<p><strong>Next.js</strong> は React を本番アプリとして完成させるためのフレームワークです。ルーティング・サーバー処理・最適化が最初から揃っています。</p>
+<pre><code>npx create-next-app@latest my-site --typescript
+cd my-site
+npm run dev    # http://localhost:3000</code></pre>
+<h2>ファイルベースのルーティング (App Router)</h2>
+<p>フォルダ構成がそのままURLになります。</p>
+<pre><code>app/
+  page.tsx              → /
+  about/page.tsx        → /about
+  blog/[slug]/page.tsx  → /blog/hello など(動的ルート)
+  layout.tsx            → 全ページ共通のレイアウト</code></pre>
+<h2>サーバーコンポーネントとデータ取得</h2>
+<pre><code>// app/users/page.tsx
+// App Router のコンポーネントは標準でサーバー側で実行される
+export default async function UsersPage() {
+  // サーバー上で直接データ取得できる(useEffect 不要)
+  const res = await fetch("https://api.example.com/users");
+  const users: User[] = await res.json();
+
+  return (
+    &lt;ul&gt;
+      {users.map((u) =&gt; &lt;li key={u.id}&gt;{u.name}&lt;/li&gt;)}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+<p>ボタン操作など対話が必要な部分だけ、ファイル先頭に <code>"use client"</code> と書いてクライアントコンポーネントにします。</p>
+<h2>Next.js が解決してくれること</h2>
+<ul>
+<li><strong>SSR / SSG</strong>: サーバーで描画して表示を高速化、SEO にも強い</li>
+<li><strong>API Routes</strong>: <code>app/api/*/route.ts</code> にバックエンドAPIも書ける</li>
+<li>画像最適化(<code>next/image</code>)・コード分割が自動</li>
+<li><strong>Vercel</strong> にそのままデプロイでき、公開が簡単</li>
+</ul>`
+    },
+    {
+      id: "ts-ecosystem",
+      title: "応用: 役立つライブラリとエコシステム",
+      body: `
+<h2>開発ツール</h2>
+<ul>
+<li><strong>Vite</strong>: 高速な開発サーバー&ビルドツール。React 学習はここから</li>
+<li><strong>ESLint + Prettier</strong>: コードチェックと自動整形。チーム開発の必需品</li>
+<li><strong>Vitest</strong>: Vite と相性のよいテストフレームワーク</li>
+</ul>
+<h2>UI・スタイリング</h2>
+<ul>
+<li><strong>Tailwind CSS</strong>: クラス名でスタイルを組み立てる人気のCSSフレームワーク。<code>&lt;div className="flex gap-2 p-4"&gt;</code></li>
+<li><strong>shadcn/ui</strong>: Tailwind ベースの高品質UIコンポーネント集</li>
+</ul>
+<h2>データまわり</h2>
+<ul>
+<li><strong>zod</strong>: 実行時の型チェック。APIレスポンスやフォーム入力の検証に</li>
+<li><strong>TanStack Query</strong>: サーバーデータの取得・キャッシュ管理</li>
+<li><strong>Prisma</strong>: TypeScript でデータベースを型安全に操作する O/R マッパー</li>
+</ul>
+<pre><code>// zod の例: 外部データを安全に受け取る
+import { z } from "zod";
+
+const UserSchema = z.object({
+  name: z.string(),
+  age: z.number().min(0),
+});
+
+type User = z.infer&lt;typeof UserSchema&gt;;   // 型も自動生成
+
+const data = await fetch("/api/user").then((r) =&gt; r.json());
+const user = UserSchema.parse(data);   // 形が違えばここで例外に</code></pre>
+<h2>学習ロードマップ</h2>
+<ol>
+<li>Vite + React で useState / useEffect に慣れる</li>
+<li>Tailwind CSS で見た目を整える</li>
+<li>Next.js でルーティングとサーバー処理を学ぶ</li>
+<li>zod / TanStack Query / Prisma で実務レベルの堅牢さに</li>
+</ol>`
     }
   ],
   quiz: [

@@ -172,6 +172,183 @@ list(enumerate(nums)) # [(0, 3), (1, 1), ...] 添字付きループに便利</co
 <pre><code>with open("data.txt", encoding="utf-8") as f:
     text = f.read()
 # with を抜けると自動でファイルが閉じられる</code></pre>`
+    },
+    {
+      id: "numpy-pandas",
+      title: "応用: データ分析 (NumPy / pandas)",
+      body: `
+<p>ここからは応用編です。Python がAI・データ分析で選ばれる最大の理由が <strong>NumPy</strong> と <strong>pandas</strong> です。まずインストールします。</p>
+<pre><code># 仮想環境を作ってからインストールするのが基本
+python -m venv .venv
+source .venv/bin/activate   # Windows は .venv\\Scripts\\activate
+pip install numpy pandas</code></pre>
+<h2>NumPy — 高速な数値計算</h2>
+<pre><code>import numpy as np
+
+arr = np.array([1, 2, 3, 4])
+arr * 2          # ループ不要で全要素を一括計算 → [2 4 6 8]
+arr.mean()       # 2.5(平均)
+arr.reshape(2, 2)  # 形状変更(行列に)
+
+# 100万件でもforループの数十倍高速に計算できる</code></pre>
+<h2>pandas — 表形式データの操作</h2>
+<p>Excel の表のようなデータを <code>DataFrame</code> として扱います。</p>
+<pre><code>import pandas as pd
+
+df = pd.read_csv("sales.csv")     # CSVを読み込む(Excelはread_excel)
+df.head()                          # 先頭5行を確認
+df.info()                          # 列の型・欠損を確認
+
+df["price"].mean()                 # 列の平均
+df[df["price"] > 1000]             # 条件で行を絞り込み
+df.groupby("category")["price"].sum()   # カテゴリ別に集計
+df.sort_values("date")             # 並べ替え
+df.dropna()                        # 欠損値のある行を除去</code></pre>
+<ul>
+<li>分析の流れ: <strong>読み込み → 確認(head/info) → 前処理(欠損・型) → 集計/分析</strong></li>
+<li>大規模データには高速な <code>Polars</code> という選択肢もある</li>
+</ul>`
+    },
+    {
+      id: "visualization",
+      title: "応用: データ可視化 (Matplotlib)",
+      body: `
+<p>分析結果はグラフにすると一気に理解しやすくなります。定番は <strong>Matplotlib</strong> です。</p>
+<pre><code>pip install matplotlib</code></pre>
+<h2>基本のグラフ</h2>
+<pre><code>import matplotlib.pyplot as plt
+
+x = [1, 2, 3, 4, 5]
+y = [10, 30, 25, 40, 55]
+
+plt.plot(x, y, marker="o")     # 折れ線グラフ
+plt.title("Sales Trend")
+plt.xlabel("Month")
+plt.ylabel("Sales")
+plt.grid(True)
+plt.show()                     # 画面に表示(plt.savefig("out.png")で保存)</code></pre>
+<h2>よく使うグラフの種類</h2>
+<pre><code>plt.bar(labels, values)        # 棒グラフ(カテゴリ比較)
+plt.scatter(x, y)              # 散布図(2変数の関係)
+plt.hist(data, bins=20)        # ヒストグラム(分布)
+plt.pie(sizes, labels=labels)  # 円グラフ(構成比)</code></pre>
+<h2>pandas との連携</h2>
+<pre><code># DataFrame から直接グラフを描ける
+df.groupby("category")["price"].sum().plot(kind="bar")
+plt.show()</code></pre>
+<ul>
+<li><code>seaborn</code>: Matplotlib ベースで統計グラフを美しく簡単に描ける</li>
+<li><code>Plotly</code>: マウスで操作できるインタラクティブなグラフ(Web向き)</li>
+<li>グラフ選びの基本 — 推移は折れ線、比較は棒、関係は散布図、分布はヒストグラム</li>
+</ul>`
+    },
+    {
+      id: "sklearn",
+      title: "応用: 機械学習入門 (scikit-learn)",
+      body: `
+<p><strong>scikit-learn</strong> は機械学習の定番ライブラリです。「データから規則性を学習して予測する」流れを最小のコードで体験できます。</p>
+<pre><code>pip install scikit-learn</code></pre>
+<h2>機械学習の基本の流れ</h2>
+<ol>
+<li>データを「学習用」と「テスト用」に分ける</li>
+<li>モデルに学習させる(<code>fit</code>)</li>
+<li>予測する(<code>predict</code>)</li>
+<li>精度を評価する(<code>score</code>)</li>
+</ol>
+<pre><code>from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import load_iris
+
+# 1. データ準備(あやめの品種分類データ)
+X, y = load_iris(return_X_y=True)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42)
+
+# 2. 学習
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# 3. 予測
+pred = model.predict(X_test)
+
+# 4. 評価
+print(model.score(X_test, y_test))   # 正解率(例: 0.95)</code></pre>
+<h2>代表的な問題のタイプ</h2>
+<ul>
+<li><strong>分類</strong>: カテゴリを当てる(迷惑メール判定など) — RandomForestClassifier, LogisticRegression</li>
+<li><strong>回帰</strong>: 数値を予測する(家賃予測など) — LinearRegression, RandomForestRegressor</li>
+<li><strong>クラスタリング</strong>: 似たものをグループ分け — KMeans</li>
+</ul>
+<p>どのモデルも <code>fit</code> → <code>predict</code> という同じ使い方なので、1つ覚えれば他にも応用できます。</p>`
+    },
+    {
+      id: "deep-learning",
+      title: "応用: ディープラーニングと生成AI",
+      body: `
+<p>画像認識や自然言語処理など複雑な問題には<strong>ディープラーニング</strong>(深層学習)を使います。Python はこの分野の事実上の標準言語です。</p>
+<h2>PyTorch — ディープラーニングの定番</h2>
+<pre><code>pip install torch</code></pre>
+<pre><code>import torch
+import torch.nn as nn
+
+# テンソル(GPU で計算できる多次元配列)
+x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+print(x * 2)
+
+# ニューラルネットワークの定義(層を重ねる)
+model = nn.Sequential(
+    nn.Linear(4, 16),   # 入力4 → 中間16
+    nn.ReLU(),          # 活性化関数
+    nn.Linear(16, 3),   # 中間16 → 出力3クラス
+)</code></pre>
+<p>学習の流れは「順伝播 → 損失計算 → 逆伝播 → パラメータ更新」の繰り返しです。まずは scikit-learn で機械学習の流れを掴んでから進むと理解しやすいです。</p>
+<h2>生成AIを使う・作る</h2>
+<ul>
+<li><strong>Hugging Face Transformers</strong>: 公開されている学習済みAIモデル(翻訳・要約・画像生成など)を数行で利用できる</li>
+<li><strong>LLM API</strong>: Anthropic (Claude) や OpenAI などのAPIを Python から呼び出せば、自作アプリにチャットAIや文章生成を組み込める(各社が公式 Python SDK を提供)</li>
+<li><strong>LangChain</strong>: LLM を使ったアプリ(RAG・エージェントなど)を組み立てるフレームワーク</li>
+</ul>
+<h2>学習ロードマップ</h2>
+<ol>
+<li>pandas でデータの扱いに慣れる</li>
+<li>scikit-learn で機械学習の流れを掴む</li>
+<li>PyTorch でディープラーニングの仕組みを学ぶ</li>
+<li>API や Transformers で生成AIをアプリに組み込む</li>
+</ol>`
+    },
+    {
+      id: "py-ecosystem",
+      title: "応用: 役立つライブラリと開発環境",
+      body: `
+<h2>開発環境</h2>
+<ul>
+<li><strong>venv</strong>: プロジェクトごとにライブラリを分離する仮想環境(標準機能)。<code>python -m venv .venv</code></li>
+<li><strong>Jupyter Notebook / JupyterLab</strong>: コードと結果とメモを1つのノートにまとめられる。データ分析の必須ツール(VS Code でも使える)</li>
+<li><strong>uv</strong>: 高速なパッケージ・環境管理ツール。pip の次世代として普及中</li>
+</ul>
+<h2>データ取得・Web</h2>
+<ul>
+<li><strong>requests</strong>: HTTP 通信の定番。<code>requests.get(url).json()</code> でAPIからデータ取得</li>
+<li><strong>FastAPI</strong>: 高速でモダンなWeb API フレームワーク。機械学習モデルをAPI化して公開するのに最適</li>
+<li><strong>Streamlit</strong>: Python だけでデータ分析アプリのWeb画面が作れる。デモやダッシュボードに便利</li>
+</ul>
+<pre><code># FastAPI の最小例: 学習済みモデルをAPIにする
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/predict")
+def predict(value: float):
+    result = model.predict([[value]])   # 学習済みモデルで予測
+    return {"prediction": result[0]}</code></pre>
+<h2>その他の定番</h2>
+<ul>
+<li><strong>Polars</strong>: pandas より高速な DataFrame ライブラリ(Rust 製)</li>
+<li><strong>openpyxl</strong>: Excel ファイルの読み書き(業務自動化に)</li>
+<li><strong>pytest</strong>: テストの定番フレームワーク</li>
+<li><strong>Pillow / OpenCV</strong>: 画像処理</li>
+</ul>
+<p>まずは <code>venv + pandas + Jupyter</code> の組み合わせから始めるのがおすすめです。</p>`
     }
   ],
   quiz: [

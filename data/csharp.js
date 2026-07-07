@@ -223,6 +223,158 @@ bool hasBig = nums.Any(x => x > 8);                  // true</code></pre>
     .Take(2)                 // 上位2件
     .ToList();               // [9, 8]</code></pre>
 <p><code>x => x * 2</code> は<strong>ラムダ式</strong>(その場で書く小さな関数)です。</p>`
+    },
+    {
+      id: "desktop-options",
+      title: "応用: デスクトップアプリ開発の選択肢",
+      body: `
+<p>ここからは応用編です。C# はデスクトップアプリ開発の選択肢が豊富です。目的に合わせて選びましょう。</p>
+<h2>主なフレームワーク</h2>
+<ul>
+<li><strong>WPF</strong>(おすすめ): Windows 向けの定番。XAML というマークアップでモダンなUIを作る。情報も求人も多い</li>
+<li><strong>Windows Forms</strong>: 最も歴史が長く、ドラッグ&ドロップで素早く画面を作れる。社内ツールなどに今も現役</li>
+<li><strong>.NET MAUI</strong>: 1つのコードで Windows / macOS / iOS / Android に対応するクロスプラットフォーム</li>
+<li><strong>Avalonia UI</strong>: WPF に似た書き味で Windows / macOS / Linux に対応。OSS で人気上昇中</li>
+<li><strong>Unity</strong>: ゲーム開発エンジン。スクリプト言語として C# を使う</li>
+</ul>
+<h2>選び方の目安</h2>
+<ul>
+<li>Windows 専用の業務アプリ・ツール → <strong>WPF</strong>(じっくり)か <strong>WinForms</strong>(手早く)</li>
+<li>Mac や Linux でも動かしたい → <strong>Avalonia</strong> または <strong>MAUI</strong></li>
+<li>スマホアプリも同じコードで → <strong>MAUI</strong></li>
+<li>ゲーム → <strong>Unity</strong></li>
+</ul>
+<h2>開発の始め方</h2>
+<pre><code># Visual Studio(無料の Community 版)を使うのが王道
+# 「新しいプロジェクトの作成」→「WPF アプリケーション」を選ぶだけ
+
+# コマンドラインからも作成できる
+dotnet new wpf -o MyApp
+cd MyApp
+dotnet run</code></pre>
+<p>本サイトでは、この後の章で最有力の <strong>WPF</strong> を軸に解説します。</p>`
+    },
+    {
+      id: "wpf-basics",
+      title: "応用: WPF 入門 (XAML と画面作り)",
+      body: `
+<p>WPF では、画面のレイアウトを <strong>XAML</strong>(XMLベースのマークアップ)で書き、動作を C# で書きます。「見た目」と「ロジック」を分離できるのが特徴です。</p>
+<h2>XAML で画面を作る (MainWindow.xaml)</h2>
+<pre><code>&lt;Window x:Class="MyApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="はじめてのWPF" Width="400" Height="250"&gt;
+    &lt;StackPanel Margin="16"&gt;
+        &lt;TextBlock Text="名前を入力してください" FontSize="14"/&gt;
+        &lt;TextBox x:Name="NameInput" Margin="0,8"/&gt;
+        &lt;Button Content="あいさつする" Click="GreetButton_Click"/&gt;
+        &lt;TextBlock x:Name="ResultText" FontSize="18" Margin="0,12"/&gt;
+    &lt;/StackPanel&gt;
+&lt;/Window&gt;</code></pre>
+<h2>C# 側でイベントを処理する (MainWindow.xaml.cs)</h2>
+<pre><code>public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();   // XAMLを読み込んで画面を組み立てる
+    }
+
+    private void GreetButton_Click(object sender, RoutedEventArgs e)
+    {
+        // x:Name を付けた要素に C# からアクセスできる
+        ResultText.Text = $"こんにちは、{NameInput.Text}さん!";
+    }
+}</code></pre>
+<h2>レイアウトの基本パネル</h2>
+<ul>
+<li><code>StackPanel</code>: 縦(または横)に順に並べる</li>
+<li><code>Grid</code>: 行と列で配置する(最もよく使う)</li>
+<li><code>DockPanel</code> / <code>WrapPanel</code>: 端に寄せる / 折り返して並べる</li>
+</ul>`
+    },
+    {
+      id: "mvvm",
+      title: "応用: MVVM とデータバインディング",
+      body: `
+<p>WPF の真価は<strong>データバインディング</strong>にあります。「データが変わったら画面も自動で変わる」仕組みで、これを整理した設計パターンが <strong>MVVM</strong>(Model-View-ViewModel)です。</p>
+<h2>MVVM の役割分担</h2>
+<ul>
+<li><strong>View</strong>(XAML): 見た目だけを担当</li>
+<li><strong>ViewModel</strong>: 画面に表示するデータと操作(コマンド)を持つ</li>
+<li><strong>Model</strong>: アプリの本体ロジック・データ</li>
+</ul>
+<h2>CommunityToolkit.Mvvm を使った ViewModel</h2>
+<p>NuGet で <code>CommunityToolkit.Mvvm</code> を入れると、定型コードを属性だけで自動生成できます。</p>
+<pre><code>using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+public partial class CounterViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private int count;          // Count プロパティが自動生成される
+
+    [RelayCommand]
+    private void Increment()    // IncrementCommand が自動生成される
+    {
+        Count++;                // 値を変えると画面が自動更新される
+    }
+}</code></pre>
+<h2>XAML 側でバインドする</h2>
+<pre><code>&lt;StackPanel&gt;
+    &lt;!-- {Binding ...} で ViewModel のプロパティと結びつける --&gt;
+    &lt;TextBlock Text="{Binding Count}" FontSize="32"/&gt;
+    &lt;Button Content="+1" Command="{Binding IncrementCommand}"/&gt;
+&lt;/StackPanel&gt;</code></pre>
+<ul>
+<li>コードビハインドに処理を書かないため、テストしやすく保守しやすい</li>
+<li>一覧表示は <code>ObservableCollection&lt;T&gt;</code> にバインドすると追加・削除が自動反映される</li>
+</ul>`
+    },
+    {
+      id: "cs-ecosystem",
+      title: "応用: 役立つライブラリとツール",
+      body: `
+<h2>まず揃えるもの</h2>
+<ul>
+<li><strong>Visual Studio Community</strong>: 無料の統合開発環境。デザイナ・デバッガ・NuGet がすべて入っている</li>
+<li><strong>NuGet</strong>: C# のパッケージ管理。<code>dotnet add package 名前</code> で追加</li>
+</ul>
+<h2>定番ライブラリ</h2>
+<ul>
+<li><strong>CommunityToolkit.Mvvm</strong>: MVVM の定型コードを自動生成(前章参照)</li>
+<li><strong>Entity Framework Core</strong>: データベースを C# のクラスとして扱える O/R マッパー。SQLite と組み合わせればデスクトップアプリにデータ保存機能を簡単に追加できる</li>
+<li><strong>Serilog</strong>: ログ出力の定番。不具合調査に必須</li>
+<li><strong>xUnit</strong>: 単体テストの定番フレームワーク</li>
+<li><strong>LiveCharts2</strong>: グラフ・チャート表示</li>
+<li><strong>MahApps.Metro / WPF UI</strong>: WPF の見た目をモダンにするUIライブラリ</li>
+</ul>
+<h2>EF Core + SQLite の例</h2>
+<pre><code>// dotnet add package Microsoft.EntityFrameworkCore.Sqlite
+public class Memo
+{
+    public int Id { get; set; }
+    public string Text { get; set; } = "";
+}
+
+public class AppDb : DbContext
+{
+    public DbSet&lt;Memo&gt; Memos => Set&lt;Memo&gt;();
+    protected override void OnConfiguring(DbContextOptionsBuilder o)
+        => o.UseSqlite("Data Source=app.db");
+}
+
+// 使う側: SQL を書かずに保存・検索できる
+using var db = new AppDb();
+db.Memos.Add(new Memo { Text = "買い物に行く" });
+db.SaveChanges();
+var list = db.Memos.Where(m => m.Text.Contains("買い物")).ToList();</code></pre>
+<h2>学習ロードマップ</h2>
+<ol>
+<li>WinForms か WPF で「ボタンを押したら動く」画面を作る</li>
+<li>WPF のデータバインディングと MVVM に慣れる</li>
+<li>EF Core + SQLite でデータを保存できるアプリに育てる</li>
+<li>必要に応じて MAUI / Avalonia でマルチプラットフォーム化</li>
+</ol>`
     }
   ],
   quiz: [
