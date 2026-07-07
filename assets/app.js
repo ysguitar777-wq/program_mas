@@ -193,10 +193,27 @@
     return out;
   }
 
-  /* ---------- ルーティング ---------- */
+  /* ---------- ルーティング ----------
+     サンドボックス環境(Artifact 等)では <a href="#/..."> のクリックが
+     実ページ遷移になり Forbidden になることがあるため、クリックを横取りして
+     JS 内部の状態だけで画面を切り替える。URL の hash は可能なら同期する。 */
+
+  let currentRoute = null;
+
+  function navigate(hash) {
+    currentRoute = hash;
+    if (location.hash !== hash) {
+      try {
+        history.pushState(null, "", hash);
+      } catch (e) {
+        /* サンドボックスで URL を書き換えられない場合は内部状態のみで動く */
+      }
+    }
+    route();
+  }
 
   function route() {
-    const hash = location.hash || "#/";
+    const hash = currentRoute || location.hash || "#/";
     const parts = hash.replace(/^#\//, "").split("/").filter(Boolean);
 
     window.scrollTo(0, 0);
@@ -207,6 +224,14 @@
     if (parts[0] === "review") return renderReview();
     return renderHome();
   }
+
+  // "#/" で始まるリンクはすべて内部ルーティングで処理する
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest('a[href^="#/"]');
+    if (!a) return;
+    e.preventDefault();
+    navigate(a.getAttribute("href"));
+  });
 
   /* ---------- ホーム ---------- */
 
@@ -320,7 +345,7 @@
       );
       pool = d.quiz.filter((q) => wrongIds.has(q.id));
       if (pool.length === 0) {
-        location.hash = "#/quiz/" + lang;
+        navigate("#/quiz/" + lang);
         return;
       }
     }
@@ -474,19 +499,11 @@
         </div>
       </div>`;
 
-    // hash が変われば hashchange 経由で開始、同じなら直接開始する
-    function goQuiz(hash, lang, review) {
-      if (location.hash === hash) {
-        startQuiz(lang, review);
-      } else {
-        location.hash = hash;
-      }
-    }
     const reviewBtn = document.getElementById("retry-review-btn");
     if (reviewBtn) {
-      reviewBtn.addEventListener("click", () => goQuiz(`#/quiz/${s.lang}/review`, s.lang, true));
+      reviewBtn.addEventListener("click", () => navigate(`#/quiz/${s.lang}/review`));
     }
-    document.getElementById("retry-btn").addEventListener("click", () => goQuiz(`#/quiz/${s.lang}`, s.lang, false));
+    document.getElementById("retry-btn").addEventListener("click", () => navigate(`#/quiz/${s.lang}`));
   }
 
   /* ---------- 復習ページ ---------- */
@@ -545,6 +562,10 @@
   /* ---------- 起動 ---------- */
 
   initTheme();
-  window.addEventListener("hashchange", route);
+  // 戻る/進むボタンと手動の hash 変更(popstate は hash 遷移でも発火する)
+  window.addEventListener("popstate", () => {
+    currentRoute = location.hash;
+    route();
+  });
   route();
 })();
